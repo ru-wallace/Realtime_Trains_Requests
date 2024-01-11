@@ -12,27 +12,31 @@ User must have a [Realtime Trains API account](https://api.rtt.io/) and include 
 
 ## Guide
 
+Find CRS code of stations matching search term:
+
     [search|s] [term]
         
-Find CRS code of stations matching search term.
+Get arrivals for given station:
   
     [arrivals|a|arr|arrs] [crs code]
         
-Get arrivals for given station.
+Get departures for given station:
 
     [departures|d|dep|deps] [crs code]
     
-Get departures for given station.
+Get all services for given station:
 
     [all|ad|ads|arrdep|arrsdeps|a+d] [crs code]
-    
-Get all services for given station
 
-    [exit|quit|escape|x|q]
-
-Close program.
+View help information:
 
     [?|help]
     
-View help information
+Close program:
+
+    [exit|quit|escape|x|q]
+
+
+    
+
 
