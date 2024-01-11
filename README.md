@@ -1,6 +1,6 @@
 ## Summary
 
-A Python script to display rail and connected transportation services using the [Realtime Trains API](https://www.realtimetrains.co.uk/about/developer/pull/docs/) using a console based UI
+A Python script to display rail and connected transportation services using the [Realtime Trains API](https://www.realtimetrains.co.uk/about/developer/pull/docs/) using a console based UI.
 
 ## Requirements
 
