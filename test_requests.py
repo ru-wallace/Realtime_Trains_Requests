@@ -39,9 +39,9 @@ def print_services(service_list):
     for service in service_list:
         if service.date != date:
             print("------------------------------------------------------------------------------------------------------\n")
-            print(f"|{service.date.center(100, "-")}|")
+            print(f" {service.weekday.title()} {service.date} ".center(102, "-"))
             print("| Service | Platform | Origin                        | Arr.  | Destination                   | Dep.  |")
-            print("------------------------------------------------------------------------------------------------------")
+            print("|----------------------------------------------------------------------------------------------------|")
             date = service.date
 
         service_str = "placeholder"
@@ -57,7 +57,7 @@ def print_services(service_list):
             stop_str = stop_list[0]
             for stop in stop_list[1:]:
                 if len(", " + stop_str + stop) < 25:
-                    stop_str += stop
+                    stop_str = stop_str + ", " + stop
                 else: 
                     stop_str += " (...)"
                     break
@@ -91,7 +91,7 @@ def get_departures(code):
         if code.upper() in stations:
             print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
         print("Getting departing services...")
-        departures = rtt_classes.Departures(code)
+        departures = rtt_classes.Departures(code, num_services=10)
         if departures.valid:
             print_services(departures.services)
     else:
@@ -108,7 +108,7 @@ def get_arrivals(code):
             print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
         print("Getting arriving services...")
 
-        arrivals = rtt_classes.Arrivals(code)
+        arrivals = rtt_classes.Arrivals(code, num_services=10)
         if arrivals.valid:
             print_services(arrivals.services)
     else:
@@ -125,9 +125,9 @@ def get_all_services(code):
         arrivals = []
         departures = []
 
-        arrivals = rtt_classes.Arrivals(code)
+        arrivals = rtt_classes.Arrivals(code, num_services=10)
         if arrivals.valid:    
-            departures = rtt_classes.Departures(code)
+            departures = rtt_classes.Departures(code, services_before=arrivals.last_date)
             uid_list = []
             service_list = []
             for service in arrivals.services:

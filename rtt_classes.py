@@ -105,6 +105,7 @@ class Station_Service:
         self.uid = service_json["serviceUid"]
         self.display_as = location["displayAs"]
         self.date = service_json["runDate"].replace("-","/")
+        self.weekday = datetime.strftime(datetime.strptime(f"{self.date}", "%Y/%m/%d"), "%A")
         self.origin = location["origin"][0]["description"]
         self.destination = location["destination"][0]["description"]
         self.type = service_json["serviceType"]
@@ -180,7 +181,7 @@ class Departures:
 
     
 
-    def __init__(self, station_code) :
+    def __init__(self, station_code, num_services=300, services_before=None) :
         
         station_code = station_code.strip()
 
@@ -202,9 +203,12 @@ class Departures:
         date = datetime.now()
         date_string = date.strftime("%Y/%m/%d")
 
+        self.last_date = date
 
+        if services_before is None:
+            services_before = date + timedelta(days=50)
         
-        while len(self.services)<= 10:
+        while len(self.services)<= num_services and date <= services_before:
 
             now = datetime.now()
             date_string = date.strftime("%Y/%m/%d")
@@ -218,6 +222,7 @@ class Departures:
                 for service in departures["services"]:
                     service_obj = Station_Service(service, self.station_name, "departure")
                     departure_datetime = datetime.strptime(f"{service_obj.date}/{service_obj.departure_time}", "%Y/%m/%d/%H%M")
+                    self.last_date = departure_datetime
                     is_in_future = departure_datetime >= now
                     if service_obj.uid not in service_uids and is_in_future:
                         self.services.append(service_obj)
@@ -247,7 +252,7 @@ class Arrivals:
         return response_dict
     
 
-    def __init__(self, station_code) :
+    def __init__(self, station_code, num_services=300, services_before = None) :
         
         station_code = station_code.strip()
 
@@ -267,12 +272,13 @@ class Arrivals:
         service_uids = []
         date = datetime.now()
         date_string = date.strftime("%Y/%m/%d")
-        current_time = date.strftime("%H%M")
-        today = datetime.now()
 
+        self.last_date = date
 
-        
-        while len(self.services)<= 10:
+        if services_before is None:
+            services_before = date + timedelta(days=50)
+
+        while len(self.services)<= num_services and date <= services_before:
 
             now = datetime.now()
             date_string = date.strftime("%Y/%m/%d")
@@ -285,12 +291,14 @@ class Arrivals:
                 for service in arrivals["services"]:
                     service_obj = Station_Service(service, self.station_name, "arrival")
                     arrival_datetime = datetime.strptime(f"{service_obj.date}/{service_obj.arrival_time}", "%Y/%m/%d/%H%M")
+                    self.last_date = arrival_datetime
                     is_in_future = arrival_datetime >= now
                     if service_obj.uid not in service_uids and is_in_future:
                         self.services.append(service_obj)
                         service_uids.append(f"{service_obj.uid}_{date_string}")
 
-            date = date + timedelta(days=1)  
+            date = date + timedelta(days=1)
+
             time.sleep(1) #wait so as not to overload the api
         
         print("\r", end="") #erase loading message
