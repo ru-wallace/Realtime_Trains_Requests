@@ -40,7 +40,7 @@ def print_services(service_list):
             print(f" {service.weekday.title()} {service.date_str} ".center(102, "-"))
             print("| Service | Platform | Origin                        | Arr.  | Destination                   | Dep.  |")
             print("|----------------------------------------------------------------------------------------------------|")
-            date = service.date
+            date = service.date_str
 
         service_str = "placeholder"
         match service.display_as:
