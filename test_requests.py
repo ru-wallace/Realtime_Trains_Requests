@@ -1,5 +1,3 @@
-import requests
-import os
 import json
 import re
 import rtt_classes
@@ -33,7 +31,7 @@ def station_search(term):
 
 def print_services(service_list):
     
-    service_list = sorted(service_list, key=rtt_classes.Station_Service.get_time)
+    service_list = sorted(service_list, key=rtt_classes.Service.get_time)
     print(f'|{f"  {service_list[0].location_name}  ".center(100, "#")}|')
     date = ""
     for service in service_list:

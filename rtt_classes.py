@@ -19,37 +19,9 @@ class RTT_Session:
         self.session.auth = (username,password)
 
 
-
-
-class Service:
-    def __init__(self, uid, date):
-
-        print("ID ", uid)
-        print("Date: ", date)
-        
-        self.uid = uid
-
-        self.stops = {}
-
-        session = RTT_Session().session
-        response = session(f"https://api.rtt.io/api/v1/json/service/{uid}/{date}")
-        data = json.loads(response.content)
-
-        #print(json.dumps(data, indent=2))
-        for stop in data["locations"]:
-            print(stop)
-            if "platform" in stop and "realtimeDeparture" in stop : 
-                print("Has platform and departure")
-                self.stops.update({stop["crs"]:
-                                        {"departure": stop["realtimeDeparture"],
-                                        "platform": stop["platform"]}})
-                
-    def print(self):
-       print(f"UID: {self.uid}")
-       print(json.dumps(self.stops, indent=2))
   
 
-class Station_Service: 
+class Service: 
 
     def get_time(service):
 
@@ -67,7 +39,7 @@ class Station_Service:
 
     def __get_stops(self) :
 
-        time = Station_Service.get_time(self)
+        time = Service.get_time(self)
 
 
         req_string = f"{self.uid}/{self.date}" 
@@ -220,7 +192,7 @@ class Departures:
                 
             if departures["services"] is not None:
                 for service in departures["services"]:
-                    service_obj = Station_Service(service, self.station_name, "departure")
+                    service_obj = Service(service, self.station_name, "departure")
                     departure_datetime = datetime.strptime(f"{service_obj.date}/{service_obj.departure_time}", "%Y/%m/%d/%H%M")
                     self.last_date = departure_datetime
                     is_in_future = departure_datetime >= now
@@ -289,7 +261,7 @@ class Arrivals:
                 return
             if arrivals["services"] is not None:
                 for service in arrivals["services"]:
-                    service_obj = Station_Service(service, self.station_name, "arrival")
+                    service_obj = Service(service, self.station_name, "arrival")
                     arrival_datetime = datetime.strptime(f"{service_obj.date}/{service_obj.arrival_time}", "%Y/%m/%d/%H%M")
                     self.last_date = arrival_datetime
                     is_in_future = arrival_datetime >= now
