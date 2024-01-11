@@ -148,8 +148,8 @@ def get_all_services(code):
 def print_help():
     print(" Help ".center(100, "*"))
     print("[search|s] <search term> ".ljust(50, "."), " Find CRS code of stations matching search term.")
-    print("[arrivals|a|arr|arrs] <crs code> ".ljust(50, "."), "Get departures for given station.")
-    print("[departures|d|dep|deps] <crs code> ".ljust(50, "."),  "Get arrivals for given station.")
+    print("[arrivals|a|arr|arrs] <crs code> ".ljust(50, "."), "Get arriving services for given station.")
+    print("[departures|d|dep|deps] <crs code> ".ljust(50, "."),  "Get departing services for given station.")
     print("[all|ad|ads|arrdep|arrsdeps|a+d] <crs code> ".ljust(50, "."), "Get all services for given station") 
     print("[exit|quit|escape|x|q] " .ljust(50, "."),  "Close program.")
     print("[?|help ]".ljust(50, "."), " View help information")
