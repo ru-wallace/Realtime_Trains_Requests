@@ -188,7 +188,8 @@ while not exit:
 
 
     exit = (command.lower() in ["exit", "q", "x", "quit", "escape"])
-
+    #TODO: Add arguments
+    #TODO: change file names
     if not exit:
 
         if command in ["search", "s"]:
