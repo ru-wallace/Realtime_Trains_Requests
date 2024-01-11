@@ -6,7 +6,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
-class RTT_Session:
+class RTT_Requests:
     def __init__(self) -> None:
 
         load_dotenv()
@@ -15,8 +15,36 @@ class RTT_Session:
         password = os.environ.get("PASSWORD")
 
         self.session = requests.Session()
-
         self.session.auth = (username,password)
+    
+    def get_services(self, code, arrivals = False, date=None):
+        req_string = code
+        if date is not None:
+            date_str = datetime.strftime(date, "%Y/%m/%d")
+            req_string += f"/{date_str}" 
+        
+        if arrivals:
+            req_string += "/arrivals"
+
+        response = self.session.get(f"https://api.rtt.io/api/v1/json/search/{req_string}")
+        response_dict = json.loads(response.content)
+        if "error" in response_dict :
+            response_dict = None
+
+        return response_dict
+    
+    def get_service_details(self, service):
+        req_string = f"{service.uid}/{service.date_str} "
+        response = self.session.get(f"https://api.rtt.io/api/v1/json/service/{req_string}")
+        details = json.loads(response.content)
+        if "error" in details:
+            details = None
+
+        return details
+
+
+
+
 
 
   
@@ -28,11 +56,11 @@ class Service:
         time = datetime.now()
         match service.display_as:
             case "ORIGIN":
-                time = datetime.strptime(f"{service.date}/{service.departure_time}", "%Y/%m/%d/%H%M")
+                time = datetime.strptime(f"{service.date_str}/{service.departure_time}", "%Y/%m/%d/%H%M")
             case "DESTINATION":
-                time = datetime.strptime(f"{service.date}/{service.arrival_time}", "%Y/%m/%d/%H%M")
+                time = datetime.strptime(f"{service.date_str}/{service.arrival_time}", "%Y/%m/%d/%H%M")
             case "CALL":
-                time = datetime.strptime(f"{service.date}/{service.departure_time}", "%Y/%m/%d/%H%M")
+                time = datetime.strptime(f"{service.date_str}/{service.departure_time}", "%Y/%m/%d/%H%M")
         
         return time
 
@@ -42,16 +70,16 @@ class Service:
         time = Service.get_time(self)
 
 
-        req_string = f"{self.uid}/{self.date}" 
+        req_string = f"{self.uid}/{self.date_str}" 
 
-        session = RTT_Session().session
+        session = RTT_Requests()
         
-        response = session.get(f"https://api.rtt.io/api/v1/json/service/{req_string}")
-
-        stops_json = json.loads(response.content)
+        service_details = session.get_service_details(self)
+        #TODO: add error handling
         self.stops_before = []
         self.stops_after= []
-        for stop in stops_json["locations"]:
+
+        for stop in service_details["locations"]:
             stop_time = 0
             if "gbttBookedDeparture" in stop:
                 stop_time = stop["gbttBookedDeparture"]
@@ -59,7 +87,7 @@ class Service:
             if "gbttBookedArrival" in stop:
                 stop_time = stop["gbttBookedArrival"]
 
-            stop_time = datetime.strptime(f"{self.date}/{stop_time}", "%Y/%m/%d/%H%M")
+            stop_time = datetime.strptime(f"{self.date_str}/{stop_time}", "%Y/%m/%d/%H%M")
 
 
             if stop_time > time:
@@ -76,8 +104,9 @@ class Service:
         location = service_json["locationDetail"]
         self.uid = service_json["serviceUid"]
         self.display_as = location["displayAs"]
-        self.date = service_json["runDate"].replace("-","/")
-        self.weekday = datetime.strftime(datetime.strptime(f"{self.date}", "%Y/%m/%d"), "%A")
+        self.date_str = service_json["runDate"].replace("-","/")
+        self.date = datetime.strptime(self.date_str, "%Y/%m/%d")
+        self.weekday = datetime.strftime(self.date,  "%A")
         self.origin = location["origin"][0]["description"]
         self.destination = location["destination"][0]["description"]
         self.type = service_json["serviceType"]
@@ -135,26 +164,11 @@ class Service:
 
 class Departures:
 
-    def __get_departures(self, code, date = False) :
-
-        
-
-
-        req_string = code
-        if date != False:
-            req_string = f"{code}/{date}" 
-
-        session = RTT_Session().session
-        response = session.get(f"https://api.rtt.io/api/v1/json/search/{req_string}")
-        response_dict = json.loads(response.content)
-        if "error" in response_dict :
-            response_dict = None
-        return response_dict
-
-    
 
     def __init__(self, station_code, num_services=300, services_before=None) :
-        
+
+        session = RTT_Requests()
+
         station_code = station_code.strip()
 
         stations = {}
@@ -184,7 +198,8 @@ class Departures:
 
             now = datetime.now()
             date_string = date.strftime("%Y/%m/%d")
-            departures = self.__get_departures(station_code, date_string)
+            #departures = self.__get_departures(station_code, date_string)
+            departures = session.get_services(code = station_code, date= date)
             if departures is None:
                 print("Invalid Station CRS Code")
                 self.valid = False
@@ -193,7 +208,7 @@ class Departures:
             if departures["services"] is not None:
                 for service in departures["services"]:
                     service_obj = Service(service, self.station_name, "departure")
-                    departure_datetime = datetime.strptime(f"{service_obj.date}/{service_obj.departure_time}", "%Y/%m/%d/%H%M")
+                    departure_datetime = datetime.strptime(f"{service_obj.date_str}/{service_obj.departure_time}", "%Y/%m/%d/%H%M")
                     self.last_date = departure_datetime
                     is_in_future = departure_datetime >= now
                     if service_obj.uid not in service_uids and is_in_future:
@@ -208,23 +223,10 @@ class Departures:
 
 class Arrivals:
 
-    def __get_arrivals(self, code, date = False) :
-
-
-        req_string = code
-        if date != False:
-            req_string = f"{code}/{date}" 
-
-        session = RTT_Session().session
-        response = session.get(f"https://api.rtt.io/api/v1/json/search/{req_string}/arrivals")
-
-        response_dict = json.loads(response.content)
-        if "error" in response_dict :
-            response_dict = None
-        return response_dict
-    
 
     def __init__(self, station_code, num_services=300, services_before = None) :
+
+        session = RTT_Requests()
         
         station_code = station_code.strip()
 
@@ -254,7 +256,7 @@ class Arrivals:
 
             now = datetime.now()
             date_string = date.strftime("%Y/%m/%d")
-            arrivals = self.__get_arrivals(station_code, date_string)
+            arrivals = session.get_services(code = station_code, date = date, arrivals = True)
             if arrivals is None:
                 print("Invalid Station CRS Code")
                 self.valid = False
@@ -262,7 +264,7 @@ class Arrivals:
             if arrivals["services"] is not None:
                 for service in arrivals["services"]:
                     service_obj = Service(service, self.station_name, "arrival")
-                    arrival_datetime = datetime.strptime(f"{service_obj.date}/{service_obj.arrival_time}", "%Y/%m/%d/%H%M")
+                    arrival_datetime = datetime.strptime(f"{service_obj.date_str}/{service_obj.arrival_time}", "%Y/%m/%d/%H%M")
                     self.last_date = arrival_datetime
                     is_in_future = arrival_datetime >= now
                     if service_obj.uid not in service_uids and is_in_future:

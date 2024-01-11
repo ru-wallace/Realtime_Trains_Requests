@@ -35,9 +35,9 @@ def print_services(service_list):
     print(f'|{f"  {service_list[0].location_name}  ".center(100, "#")}|')
     date = ""
     for service in service_list:
-        if service.date != date:
+        if service.date_str != date:
             print("------------------------------------------------------------------------------------------------------\n")
-            print(f" {service.weekday.title()} {service.date} ".center(102, "-"))
+            print(f" {service.weekday.title()} {service.date_str} ".center(102, "-"))
             print("| Service | Platform | Origin                        | Arr.  | Destination                   | Dep.  |")
             print("|----------------------------------------------------------------------------------------------------|")
             date = service.date
