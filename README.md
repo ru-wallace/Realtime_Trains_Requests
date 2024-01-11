@@ -8,7 +8,7 @@ User must have a [Realtime Trains API account](https://api.rtt.io/) and include 
 
 
     USER=[username]
-    PASS=[password]
+    PASSWOORD=[password]
 
 ## Guide
 
