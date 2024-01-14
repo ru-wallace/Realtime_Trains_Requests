@@ -1,6 +1,6 @@
 import json
 import re
-import rtt_classes
+import rtt_connect
 
 stations = {}
 
@@ -31,7 +31,7 @@ def station_search(term):
 
 def print_services(service_list):
     
-    service_list = sorted(service_list, key=rtt_classes.Service.get_time)
+    service_list = sorted(service_list, key=rtt_connect.Service.get_time)
     print(f'|{f"  {service_list[0].location_name}  ".center(100, "#")}|')
     date = ""
     for service in service_list:
@@ -89,7 +89,7 @@ def get_departures(code):
         if code.upper() in stations:
             print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
         print("Getting departing services...")
-        departures = rtt_classes.Departures(code, num_services=10)
+        departures = rtt_connect.Departures(code, num_services=10)
         if departures.valid:
             print_services(departures.services)
     else:
@@ -106,7 +106,7 @@ def get_arrivals(code):
             print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
         print("Getting arriving services...")
 
-        arrivals = rtt_classes.Arrivals(code, num_services=10)
+        arrivals = rtt_connect.Arrivals(code, num_services=10)
         if arrivals.valid:
             print_services(arrivals.services)
     else:
@@ -123,9 +123,9 @@ def get_all_services(code):
         arrivals = []
         departures = []
 
-        arrivals = rtt_classes.Arrivals(code, num_services=10)
+        arrivals = rtt_connect.Arrivals(code, num_services=10)
         if arrivals.valid:    
-            departures = rtt_classes.Departures(code, services_before=arrivals.last_date)
+            departures = rtt_connect.Departures(code, services_before=arrivals.last_date)
             uid_list = []
             service_list = []
             for service in arrivals.services:
