@@ -1,3 +1,7 @@
+# NOTE: As of 2024-01-20 the API seems to be returning incorrect results.
+### I'm trying to work out if it's a problem with requests generated in this code, but it seems to happen everywhere.
+
+
 ## Summary
 
 A Python script to display rail and connected transportation services using the [Realtime Trains API](https://www.realtimetrains.co.uk/about/developer/pull/docs/) using a console based UI.

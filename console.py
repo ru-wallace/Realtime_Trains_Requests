@@ -82,22 +82,26 @@ def print_services(service_list):
 
 
 #load and print upcoming departures
-def get_departures(code):
+def get_departures(code, test=False):
     crs_ex = re.compile("^[a-zA-Z][a-zA-Z][a-zA-Z]$") #check code is 3 letters only
     code = code.strip()
     if crs_ex.match(code):
         if code.upper() in stations:
             print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
         print("Getting departing services...")
-        departures = rtt_connect.Departures(code, num_services=10)
+        departures = rtt_connect.Departures(code, num_services=10, test=test)
         if departures.valid:
             print_services(departures.services)
+        else:
+            if code.upper() in stations:
+                print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
+            print(f"No Services Found")
     else:
         print("Invalid Station CRS Code - use search to find stations")
 
 
 #load and print upcoming arrivals
-def get_arrivals(code): 
+def get_arrivals(code, test = False): 
     crs_ex = re.compile("^[a-zA-Z][a-zA-Z][a-zA-Z]$") #check code is 3 letters only
     code = code.strip()
     if crs_ex.match(code):
@@ -106,13 +110,17 @@ def get_arrivals(code):
             print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
         print("Getting arriving services...")
 
-        arrivals = rtt_connect.Arrivals(code, num_services=10)
+        arrivals = rtt_connect.Arrivals(code, num_services=10, test=test)
         if arrivals.valid:
             print_services(arrivals.services)
+        else:
+            if code.upper() in stations:
+                print(f"{code.upper()}: {stations[code.upper()]["station_name"][:-12]}")
+                print(f"No Services Found")
     else:
         print("Invalid Station CRS Code - use search to find stations")
 
-def get_all_services(code):
+def get_all_services(code, test=False):
     crs_ex = re.compile("^[a-zA-Z][a-zA-Z][a-zA-Z]$") #check code is 3 letters only
     code = code.strip()
     if crs_ex.match(code):
@@ -123,24 +131,23 @@ def get_all_services(code):
         arrivals = []
         departures = []
 
-        arrivals = rtt_connect.Arrivals(code, num_services=10)
-        if arrivals.valid:    
-            departures = rtt_connect.Departures(code, services_before=arrivals.last_date)
-            uid_list = []
-            service_list = []
-            for service in arrivals.services:
+        arrivals = rtt_connect.Arrivals(code, num_services=10, test=test)
+         
+        departures = rtt_connect.Departures(code, services_before=arrivals.last_date, test=test)
+        uid_list = []
+        service_list = []
+        for service in arrivals.services:
+            uid_list.append(service.uid)
+            service_list.append(service)
+
+        for service in departures.services:
+            if service.display_as == "ORIGIN":
                 uid_list.append(service.uid)
                 service_list.append(service)
-
-            for service in departures.services:
-                if service.display_as == "ORIGIN":
-                    uid_list.append(service.uid)
-                    service_list.append(service)
-            
-            print_services(service_list)
+        
+        print_services(service_list)
     else:
         print("Invalid Station CRS Code - use search to find stations")
-
 
 
 def print_help():
@@ -161,8 +168,6 @@ print("".center(100,"*"))
 
 print("Enter '?' or 'help' for commands...")
 
-
-
 exit = False
 empty_loops = 0
 
@@ -181,10 +186,15 @@ while not exit:
     input_list = input_value.split(" ", 1)
 
     command = input_list[0]
-    body = None
+    term = None
+    test = False
     
     if len(input_list) > 1:
-        body = input_list[1].strip()
+        body = input_list[1].strip().rsplit(" ", 1)
+        term = body[0]
+        if "-t" in body:
+            test = True
+
 
 
     exit = (command.lower() in ["exit", "q", "x", "quit", "escape"])
@@ -193,15 +203,15 @@ while not exit:
     if not exit:
 
         if command in ["search", "s"]:
-            station_search(term = body)
+            station_search(term = term)
         elif command in ["d", "departures", "dep", "deps"]:
-            get_departures(body)
-        elif command in ["?", "help"]:
-            print_help()
+            get_departures(term, test=test)
         elif command in ["a", "arrivals", "arr"]:
-            get_arrivals(body)
+            get_arrivals(term, test=test)
         elif command in ["ad", "da", "all"]:
-            get_all_services(body)
+            get_all_services(term, test=test)
+        elif command in ["?", "help"]:
+            print_help()            
         else:
             print(f"'{command}' is not a recognised command. use '?' or 'help' for a list of commands")
 

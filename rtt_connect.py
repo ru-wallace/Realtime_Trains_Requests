@@ -17,20 +17,28 @@ class RTT_Requests:
         self.session = requests.Session()
         self.session.auth = (username,password)
     
-    def get_services(self, code, arrivals = False, date=None):
+    def get_services(self, code, arrivals = False, date=None, print_response = False):
         req_string = code
         if date is not None:
             date_str = datetime.strftime(date, "%Y/%m/%d")
             req_string += f"/{date_str}" 
+                    
         
         if arrivals:
             req_string += "/arrivals"
 
+
+
         response = self.session.get(f"https://api.rtt.io/api/v1/json/search/{req_string}")
+        
+        if print_response:
+            print("req string: ", req_string)
+            print("response: ", response.content)
         response_dict = json.loads(response.content)
         if "error" in response_dict :
             response_dict = None
 
+        
         return response_dict
     
     def get_service_details(self, service):
@@ -150,22 +158,25 @@ class Service:
            
 
     def print(self):
-        if self.mode == "departure":
-            if self.type == "train":
-                print(f"{self.departure_time} to {self.destination.ljust(30, '.')} | Platform {self.platform.ljust(2)} | {self.operator}")
-            else:
-                print(f"{self.departure_time} to {self.destination.ljust(30, '.')} | {self.type.title()} {self.stops}")
-        elif self.mode == "arrival":
-            if self.type == "train":
-                print(f"{self.arrival_time} from {self.origin.ljust(30, '.')} | Platform {self.platform.ljust(2)} | {self.operator}")
-            else:
-                print(f"{self.arrival_time} from {self.origin.ljust(30, '.')}")
+        match self.display_as:
+            case "ORIGIN":
+                if self.type == "train":
+                    print(f"{self.departure_time} to {self.destination.ljust(30, '.')} | Platform {self.platform.ljust(2)} | {self.operator}")
+                else:
+                    print(f"{self.departure_time} to {self.destination.ljust(30, '.')} | {self.type.title()} {self.stops_before}, {self.stops_after}")
+            case "DESTINATION":
+                    if self.type == "train":
+                        print(f"{self.arrival_time} from {self.origin.ljust(30, '.')} | Platform {self.platform.ljust(2)} | {self.operator}")
+                    else:
+                        print(f"{self.arrival_time} from {self.origin.ljust(30, '.')}")
+            case "CALL":
+                    print(f"{self.departure_time} from {self.origin} to {self.destination} | Platform {self.platform.ljust(2)} | {self.operator}")
 
 
 class Departures:
 
 
-    def __init__(self, station_code, num_services=300, services_before=None) :
+    def __init__(self, station_code, num_services=300, services_before=None, test = False) :
 
         session = RTT_Requests()
 
@@ -193,13 +204,18 @@ class Departures:
 
         if services_before is None:
             services_before = date + timedelta(days=50)
-        
-        while len(self.services)<= num_services and date <= services_before:
+        elif services_before < (date + timedelta(days=1)):
+            services_before = date + timedelta(days=1)
 
+        
+        loop_count = 0
+        done = False
+
+        while len(self.services)<= num_services and date <= services_before and not done:
+            loop_count += 1
             now = datetime.now()
             date_string = date.strftime("%Y/%m/%d")
-            #departures = self.__get_departures(station_code, date_string)
-            departures = session.get_services(code = station_code, date= date)
+            departures = session.get_services(code = station_code, date= date, print_response=test)
             if departures is None:
                 print("Invalid Station CRS Code")
                 self.valid = False
@@ -208,15 +224,30 @@ class Departures:
             if departures["services"] is not None:
                 for service in departures["services"]:
                     service_obj = Service(service, self.station_name, "departure")
-                    departure_datetime = datetime.strptime(f"{service_obj.date_str}/{service_obj.departure_time}", "%Y/%m/%d/%H%M")
-                    self.last_date = departure_datetime
-                    is_in_future = departure_datetime >= now
-                    if service_obj.uid not in service_uids and is_in_future:
-                        self.services.append(service_obj)
-                        service_uids.append(f"{service_obj.uid}_{date_string}")
+                    if service_obj.display_as in ["ORIGIN", "CALL"]:
+                        departure_datetime = datetime.strptime(f"{service_obj.date_str}/{service_obj.departure_time}", "%Y/%m/%d/%H%M")
+                        self.last_date = departure_datetime
+                        is_in_future = departure_datetime >= now
+                        matches_day = service_obj.date_str == date_string
+
+                        if f"{service_obj.uid}_{service_obj.date_str}" not in service_uids and is_in_future and matches_day:
+                            self.services.append(service_obj)
+                            service_uids.append(f"{service_obj.uid}_{date_string}")
+                    else:
+                        print(f"API Error: {service_obj.uid} on {service_obj.date_str} is not a Departing service.")
 
             date = date + timedelta(days=1)  
             time.sleep(1) #wait so as not to overload the api
+            if loop_count > 5 :
+                print(f"No services found in next {loop_count} days")
+                keep_searching = input("Keep searching? ([y]/n)").strip().lower()
+                if keep_searching in ["n", "no"]:
+                    print("Finished Search")
+                    done = True
+                loop_count = 0
+                    
+
+                
         
         print("\r", end="") #erase loading message
 
@@ -224,7 +255,7 @@ class Departures:
 class Arrivals:
 
 
-    def __init__(self, station_code, num_services=300, services_before = None) :
+    def __init__(self, station_code, num_services=300, services_before = None, test = False) :
 
         session = RTT_Requests()
         
@@ -251,12 +282,17 @@ class Arrivals:
 
         if services_before is None:
             services_before = date + timedelta(days=50)
+        elif services_before < (date + timedelta(days=1)):
+            services_before = date + timedelta(days=1)
 
-        while len(self.services)<= num_services and date <= services_before:
+        loop_count = 0
+        done = False
 
+        while len(self.services)<= num_services and date <= services_before and done == False:
+            loop_count += 1
             now = datetime.now()
             date_string = date.strftime("%Y/%m/%d")
-            arrivals = session.get_services(code = station_code, date = date, arrivals = True)
+            arrivals = session.get_services(code = station_code, date = date, arrivals = True, print_response=test)
             if arrivals is None:
                 print("Invalid Station CRS Code")
                 self.valid = False
@@ -264,14 +300,27 @@ class Arrivals:
             if arrivals["services"] is not None:
                 for service in arrivals["services"]:
                     service_obj = Service(service, self.station_name, "arrival")
-                    arrival_datetime = datetime.strptime(f"{service_obj.date_str}/{service_obj.arrival_time}", "%Y/%m/%d/%H%M")
-                    self.last_date = arrival_datetime
-                    is_in_future = arrival_datetime >= now
-                    if service_obj.uid not in service_uids and is_in_future:
-                        self.services.append(service_obj)
-                        service_uids.append(f"{service_obj.uid}_{date_string}")
+                    if service_obj.display_as in ["DESTINATION", "CALL"]:
+                        
+                        arrival_datetime = datetime.strptime(f"{service_obj.date_str}/{service_obj.arrival_time}", "%Y/%m/%d/%H%M")
+                        self.last_date = arrival_datetime
+                        is_in_future = arrival_datetime >= now
+                        if service_obj.uid not in service_uids and is_in_future:
+                            self.services.append(service_obj)
+                            service_uids.append(f"{service_obj.uid}_{date_string}")
+                    else:
+                        print(f"API Error: {service_obj.uid} on {service_obj.date_str} is not an Arriving service.")
 
             date = date + timedelta(days=1)
+            print("Number of Services: ", len(self.services))
+
+            if loop_count > 5 and len(self.services) == 0:
+                print(f"No services found in next {loop_count} days")
+                keep_searching = input("Keep searching? ([y]/n)").strip().lower()
+                if keep_searching in ["n", "no"]:
+                    print("Finished Search")
+                    done = True
+                loop_count = 0
 
             time.sleep(1) #wait so as not to overload the api
         
