@@ -14,6 +14,11 @@ User must have a [Realtime Trains API account](https://api.rtt.io/) and include 
     USER=[username]
     PASSWORD=[password]
 
+
+Create a conda environment using the [environment.yml](environment.yml) file using the below command or install the relevant dependencies listed in the file through other means.
+
+    conda env create -f environment.yml
+
 ## Guide
 
 Find CRS code of stations matching search term:
